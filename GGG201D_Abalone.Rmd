@@ -4,6 +4,7 @@ author: "Carolina Rios"
 date: "2023-12-01"
 output: html_document
 ---
+Project members: Carolina Rios, Kyndall Zeller, Tatum Bernat
 
 # 0.0: Data Organization
 
