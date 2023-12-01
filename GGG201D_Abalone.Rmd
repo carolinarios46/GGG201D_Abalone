@@ -1,0 +1,12 @@
+---
+title: "Abalone Population Genetics"
+author: "Carolina Rios"
+date: "2023-12-01"
+output: html_document
+---
+
+# 0.0: Data Organization
+
+Unfiltered abalone VCF is located on the genome center at `/share/ant157/students/carolina/Abalone/73-Haliotis_GCA_023055435.1.filtered.vcf`
+
+# 1.1: Filtering VCF
