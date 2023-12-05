@@ -10,4 +10,42 @@ Project members: Carolina Rios, Kyndall Zeller, Tatum Bernat
 
 Unfiltered abalone VCF is located on the genome center at `/share/ant157/students/carolina/Abalone/73-Haliotis_GCA_023055435.1.filtered.vcf`
 
+
 # 1.1: Filtering VCF
+
+Starting at abalone VCF file that removes related individuals and Monterey low DP samples:
+`/share/ant157/students/carolina/Abalone/NoSibs.NoLowDP.filtered.recode.vcf`
+
+Evaluated if there are individuals missing lots of data:
+
+```
+#create file to assess individuals that did not sequence well
+vcftools --vcf NoSibs.NoLowDP.filtered.recode.vcf --missing-indv --out scorch.vcf
+
+#view the output .imiss file
+cat scorch.vcf.imiss
+
+#visualize missing data
+`tsbernat@farm:/group/awhitehegrp/joanna/73-Haliotis$ mawk '!/IN/' scorch.vcf.imiss | cut -f5 > totalmissing
+gnuplot << \EOF
+set terminal dumb size 120, 30
+set autoscale 
+unset label
+set title "Histogram of % missing data per individual"
+set ylabel "Number of Occurrences"
+set xlabel "% of missing data"
+#set yr [0:100000]
+binwidth=0.01
+bin(x,width)=width*floor(x/width) + binwidth/2.0
+plot 'totalmissing' using (bin($1,binwidth)):(1.0) smooth freq with boxes
+pause -1
+EOF
+```
+Data is really clean! The individual missing the most data appears to be AWJG01B01 with ~18% missing data.
+
+Next step is to figure out if/how to filter missing data by each population. Bin by ecoregion?
+
+
+
+
+
