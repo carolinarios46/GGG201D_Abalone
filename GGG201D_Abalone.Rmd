@@ -45,6 +45,9 @@ Data is really clean! The individual missing the most data appears to be AWJG01B
 
 Next step is to figure out if/how to filter missing data by each population. Bin by ecoregion?
 
+Changing read depth (min 10, max 40):
+vcftools --vcf NoSibs.NoLowDP.filtered.recode.vcf --max-missing 0.5 --maf 0.05 --minDP 10 —maxDP 40 --minQ 30 --recode --recode-INFO-all --out NoSibs.NoLowDP.filtered.recode.vcf.min10max40
+
 
 
 
