@@ -48,6 +48,215 @@ Next step is to figure out if/how to filter missing data by each population. Bin
 Changing read depth (min 10, max 40):
 vcftools --vcf NoSibs.NoLowDP.filtered.recode.vcf --max-missing 0.5 --maf 0.05 --minDP 10 —maxDP 40 --minQ 30 --recode --recode-INFO-all --out NoSibs.NoLowDP.filtered.recode.vcf.min10max40
 
+perl filter_hwe_by_pop.pl -v G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.recode.vcf.recode.vcf -p popmap.txt -o G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE
+
+plink --file G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink --allow-extra-chr --r2 --out G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink_r2 --threads 8
+
+
+
+plink --file  --pca --allow-extra-chr --out PCA/NoSibs.noAnnotations.pop.missing5mac3.recode.vcf.plink.LDfiltered_0.8.pca
+
+
+
+
+this is what i did on tadpole:
+module load plink/1.90p
+
+plink --vcf G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.recode.vcf --recode --allow-extra-chr --out G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink
+#19728 variants and 236 people pass filters and QC.
+Note: No phenotypes present.
+--recode ped to G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink.ped +
+G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink.map ... done.
+
+G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink --allow-extra-chr --r2 --out G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink_r2 --threads 8
+
+plink --vcf G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink --set-missing-var-ids @:# --recode vcf --allow-extra-chr --out G4plink_LD/G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plinkLDfiltered_0.8 --extract G4plink_LD/G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plink_indep_pairwise_100_10_0.8.prune.in
+
+PCA junk:
+columns=c("sampleID", "ID", "pc1", "pc2", "pc3", "pc4", "pc5","pc6","pc7","pc8","pc9","pc10","pc11","pc12","pc13","pc14","pc15","pc16","pc17","pc18","pc19","pc20")
+
+abalone <- read.table("G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plinkLDfiltered_0.8.vcf.plink.eigenvec", sep = "", header=F, col.names=columns)
+
+eigenval <-read.table("G4NoSibs.NoLowDP.filtered.recode.vcf.min10max40.HWE.plinkLDfiltered_0.8.vcf.plink.eigenval")
+
+prop_explained <- c()
+for (s in eigenval$V1) {
+  #print(s / sum(eigenval$V1))
+  prop_explained <- c(prop_explained,round(((s / sum(eigenval$V1))*100),2))
+}
+
+barplot(prop_explained, ylab = "% variance explained by PC", xlab = "PC",
+        names.arg=c(1:length(prop_explained)))
+
+library(ggplot2)
+ggplot(abalone, aes(x=pc1,y=pc2, color=sampleID))+
+  geom_point(show.legend = FALSE)+ xlab("PC1")+ ylab("PC2")
+
+basic <- ggplot(abalone, aes(x=pc1,y=pc2, color=sampleID))+
+  geom_point()+ xlab("PC1")+ ylab("PC2")
+
+basic + theme(legend.position ="bottom")
+
+
+popmap <-read.delim2("/Users/tatumbernat/Desktop/Whitehead_Lab_Data/popmap.txt")
+colnames(popmap) <- c("SAMPLE", "location")
+popmap$location <- as.factor(popmap$location)
+popmap$location <-factor(popmap$location, levels = c("CharlestonSouthCove", "PortOrford", "RogueReef", "BrookingsHooskanadenCreek", "BrookingsLoneRanch", "Brookings", "CrescentCity", "Trinidad", "ShelterCove", "HouseCove", "VanDamme", "SaltPoint", "TimberCove", "MunizRanch", "BodegaBay", "PointReyes", "FarallonesIsland",  "Monterey",  "MorroBayPupRock", "MorroBayDiabloCove", "MorroBay", "SanMiguelIsle", "SanPedro", "PointLoma", "Ensenada", "SantoTomas", "PuntaSanJose"))
+
+names(abalone)[names(abalone)=="sampleID"] <- "SAMPLE"
+vcf_sample_info <- inner_join(abalone,popmap, by = "SAMPLE")
+vcf_sample_info2 <- inner_join(popmap,abalone, by = "SAMPLE")
+
+
+
+#pca <-data.frame(sample=vcf_sample_info2$SAMPLE, 
+                 pop=vcf_sample_info$LOCATION,
+                 year=vcf_sample_info$COLLECTION_YEAR,
+                 plate=vcf_sample_info$LIBRARY_PLATE,
+                 PointConception=vcf_sample_info$PointConception,
+                 PC1=vcf_sample_info$V3,
+                 PC2=vcf_sample_info$V4,
+                 PC3=vcf_sample_info$V5,
+                 PC4=vcf_sample_info$V6,
+                 stringsAsFactors=FALSE)
+
+ggplot(data = vcf_sample_info2)+
+  geom_point(data = vcf_sample_info2, aes(x = pc1, y = pc2, fill = location, color = location), size = 3) +
+  #geom_text_repel(data =vcf_sample_info2, aes(x = pc1, y = pc2, label = SAMPLE), size = 3) +
+  xlab(paste("PC1: ", prop_explained[1],"%",sep = ""))+
+  ylab(paste("PC2: ", prop_explained[2],"%",sep = ""))+
+  theme_bw()
+
+survey$group4 <- c("group4a", "group4a", "group4a", "f", "m")
+
+#def get_grouped(location):
+ # if location 'BodegaBay:
+  return 'group4C'
+elif location 'Brookings':
+  return 'group4A'
+elif location 'CharlestonSouthCove':
+  return 'group4A'
+elif location 'CrescentCity':
+  return 'group4B'
+elif location 'Ensenada':
+  return 'group4D'
+elif location 'FarallonesIsland':
+  return 'group4C'
+elif location 'HouseCove':
+  return 'group4B'
+elif location 'PointLoma':
+  return 'group4D'
+elif location 'SanMiguelIsle':
+  return 'group4D'
+elif location 'Monterey':
+  return 'group4C'
+elif location 'MorroBay':
+  return 'group4D'
+  elif location 'MunizRanch':
+  return 'group4C'
+elif location 'SanPedro':
+  return 'group4D'
+elif location 'PortOrford':
+  return 'group4A'
+elif location 'PuntaSanJose':
+  return 'group4D'
+elif location 'PointReyes':
+  return 'group4C'
+  elif location 'RogueReef':
+  return 'group4A'
+elif location 'SaltPoint':
+  return 'group4B'
+elif location 'ShelterCove':
+  return 'group4B'
+elif location 'TimberCove':
+  return 'group4C'
+elif location 'SantoTomas':
+  return 'group4D'
+  elif location 'Trinidad':
+  return 'group4B'
+elif location 'VanDamme':
+  return 'group4B'
+
+#Adding column based on other column:
+
+vcf_sample_info2 %>%
+  mutate(Group4 = case_when(
+    endsWith(location, "CharlestonSouthCove") ~ "group4A",
+    endsWith(location, "PortOrford")  ~ "group4A",
+    endsWith(location, "RogueReef") ~ "group4A",
+    endsWith(location, "Brookings") ~ "group4A",
+    endsWith(location, "CrescentCity") ~ "group4B",
+    endsWith(location, "Trinidad") ~ "group4B",
+    endsWith(location, "ShelterCove") ~ "group4B",
+    endsWith(location, "HouseCove") ~ "group4B",
+    endsWith(location, "VanDamme") ~ "group4B",
+    endsWith(location, "SaltPoint") ~ "group4B",
+    endsWith(location, "TimberCove") ~ "group4C",
+    endsWith(location, "MunizRanch") ~ "group4C",
+    endsWith(location, "BodegaBay") ~ "group4C",
+    endsWith(location, "PointReyes") ~ "group4C",
+    endsWith(location, "FarallonesIsland") ~ "group4C",
+    endsWith(location, "Monterey") ~ "group4C",
+    endsWith(location, "MorroBay")  ~ "group4D",
+    endsWith(location, "SanMiguelIsle")  ~ "group4D",
+    endsWith(location, "SanPedro")  ~ "group4D",
+    endsWith(location, "PointLoma")  ~ "group4D",
+    endsWith(location, "Ensenada")  ~ "group4D",
+    endsWith(location, "SantoTomas")  ~ "group4D",
+    endsWith(location, "PuntaSanJose")  ~ "group4D"))
+
+vcf_sample_infogroup <- vcf_sample_info2 %>%
+  mutate(Group4 = case_when(
+    (location == "CharlestonSouthCove") ~ "group4A",
+    (location == "PortOrford")  ~ "group4A",
+    (location == "RogueReef") ~ "group4A",
+    (location == "Brookings") ~ "group4A",
+    (location == "CrescentCity") ~ "group4B",
+    (location == "Trinidad") ~ "group4B",
+    (location == "ShelterCove") ~ "group4B",
+    (location == "HouseCove") ~ "group4B",
+    (location == "VanDamme") ~ "group4B",
+    (location == "SaltPoint") ~ "group4B",
+    (location == "TimberCove") ~ "group4C",
+    (location == "MunizRanch") ~ "group4C",
+    (location == "BodegaBay") ~ "group4C",
+    (location == "PointReyes") ~ "group4C",
+    (location == "FarallonesIsland") ~ "group4C",
+    (location == "Monterey") ~ "group4C",
+    (location == "MorroBay")  ~ "group4D",
+    (location == "SanMiguelIsle")  ~ "group4D",
+    (location == "SanPedro")  ~ "group4D",
+    (location == "PointLoma")  ~ "group4D",
+    (location == "Ensenada")  ~ "group4D",
+    (location == "SantoTomas")  ~ "group4D",
+    (location == "PuntaSanJose")  ~ "group4D"))
+
+
+
+ggplot(data = vcf_sample_info2)+
+  geom_point(data = vcf_sample_info2, aes(x = pc1, y = pc2, fill = location, color = location), size = 3) +
+  #geom_text_repel(data =vcf_sample_info2, aes(x = pc1, y = pc2, label = SAMPLE), size = 3) +
+  xlab(paste("PC1: ", prop_explained[1],"%",sep = ""))+
+  ylab(paste("PC2: ", prop_explained[2],"%",sep = ""))+
+  theme_bw()
+
+
+ggplot(data = vcf_sample_infogroup)+
+  geom_point(data = vcf_sample_infogroup, aes(x = pc1, y = pc2, fill = Group4, color = Group4), size = 3) +
+  #geom_text_repel(data =vcf_sample_info2, aes(x = pc1, y = pc2, label = SAMPLE), size = 3) +
+  xlab(paste("PC1: ", prop_explained[1],"%",sep = ""))+
+  ylab(paste("PC2: ", prop_explained[2],"%",sep = ""))+
+  theme_bw()
+
+ggplot(data = vcf_sample_info2)+
+  geom_point(data = vcf_sample_info2, aes(x = pc3, y = pc5, fill = location, color = location), size = 3) +
+  #geom_text_repel(data =vcf_sample_info2, aes(x = pc1, y = pc2, label = SAMPLE), size = 3) +
+  xlab(paste("PC3: ", prop_explained[3],"%",sep = ""))+
+  ylab(paste("PC4: ", prop_explained[4],"%",sep = ""))+
+  theme_bw()
+#originally mislabeled pc4 so here it says pc5
+
+```
 
 
 
